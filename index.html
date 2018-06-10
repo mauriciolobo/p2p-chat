@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <p>ID:
+        <span id="myid"></span>
+    </p>
+    <button id="btnSend">Send</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.1.2/simplepeer.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        var peers = {};
+        socket.on('connect', function () {
+            socket.emit('message', {
+                type: 'request',
+                from: socket.id
+            });
+            $('#myid').html(socket.id);
+        });
+
+        var peers = {};
+
+        socket.on('message', (response, id) => {
+            console.log('MESSAGE', id, response);
+            switch (response.type) {
+                case 'request':
+                    var peer = new SimplePeer({
+                        initiator: true,
+                        trickle: false
+                    });
+
+                    peer.on('signal', data => {
+                        socket.emit('message', {
+                            type: 'offer',
+                            from: socket.id,
+                            data
+                        });
+                    });
+
+                    peer.on('connect', () => {
+                        console.log('CONNECTED')
+                    });
+
+                    peers[id] = peer;
+
+                    break;
+
+                case 'offer':
+                    var peer = new SimplePeer({
+                        initiator: false,
+                        trickle: false
+                    });
+
+                    peer.on('signal', data => {
+                        socket.emit('message', {
+                            type: 'answer',
+                            from: socket.id,
+                            data
+                        });
+                    });
+
+                    peer.on('connect', () => {
+                        console.log('CONNECTED')
+                    });
+
+                    peer.signal(response.data);
+
+                    peers[id] = peer;
+
+                    break;
+
+                case 'answer':
+                    console.log('ANSWER', peers[id])
+                    peers[id].signal(response.data);
+                    break;
+
+                default:
+                    break;
+            }
+        });
+    </script>
+</body>
+
+</html>
