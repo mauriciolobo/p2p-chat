@@ -12,9 +12,10 @@ io.on('connection', function (socket) {
         console.log('user disconnected', socket.id);
     });
 
-    socket.on('message', function(data){
-        console.log('message received!', data);
-        socket.broadcast.emit('message', data, socket.id);
+    socket.on('message', function(data, id){
+        console.log('message received!', {to: id, localid: socket.id, data});
+        if(!id) socket.broadcast.emit('message', data, socket.id);
+        else socket.to(id).emit('message', data, socket.id);
     });
 });
 

@@ -46,7 +46,7 @@
                             type: 'offer',
                             from: socket.id,
                             data
-                        });
+                        }, response.from);
                     });
 
                     peer.on('connect', () => {
@@ -73,7 +73,7 @@
                             type: 'answer',
                             from: socket.id,
                             data
-                        });
+                        }, response.from);
                     });
 
                     peer.on('connect', () => {
