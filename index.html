@@ -12,6 +12,8 @@
     <p>ID:
         <span id="myid"></span>
     </p>
+    <ul id="messages" style="border: solid 1px black; border-radius: 5px; height: 100px; overflow: auto">
+    </ul>
     <textarea id="taMessage" cols="30" rows="10"></textarea>
     <button id="btnSend">Send</button>
 
@@ -19,10 +21,19 @@
     <script src="https://code.jquery.com/jquery-3.3.1.js" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        function write(message) {
+            console.log(message);
+            $('#messages').append('<li>' + message + '</li>');
+            $('#messages').animate({scrollTop: $('#messages').height()})
+        }
+    </script>
+    <script>
         var socket = io();
         var peers = [];
         $('#btnSend').click(e => {
-            peers.forEach(p=> p.peer.send($('#taMessage').val()));
+            var msg = $('#taMessage').val();
+            write(`Message send: ` + msg);
+            peers.forEach(p => p.peer.send(msg));
         });
         socket.on('connect', function () {
             socket.emit('message', {
@@ -30,7 +41,8 @@
                 from: socket.id
             });
             $('#myid').html(socket.id);
-        });        
+            write(`[me(${socket.id})]Waiting signal...`);
+        });
 
         socket.on('message', (response, id) => {
             console.log('MESSAGE', id, response);
@@ -47,18 +59,23 @@
                             from: socket.id,
                             data
                         }, response.from);
+                        write(`Emit peer signal to ${response.from} ...`);
                     });
 
                     peer.on('connect', () => {
-                        console.log('CONNECTED')
+                        write(`Connected to peer ${response.from}!`);
                     });
 
                     peer.on('data', function (data) {
                         console.log('PEER DATA', data.toString());
+                        write(`[${response.from}]-MESSAGE: ${data.toString()}`);
                     });
 
                     //peers[id] = peer;
-                    peers.push({id, peer});
+                    peers.push({
+                        id,
+                        peer
+                    });
 
                     break;
 
@@ -74,25 +91,31 @@
                             from: socket.id,
                             data
                         }, response.from);
+                        write(`Emit peer signal to ${response.from} ...`);
                     });
 
                     peer.on('connect', () => {
-                        console.log('CONNECTED')
+                        console.log('CONNECTED');
+                        write(`Connected to peer ${response.from}!`);
                     });
 
                     peer.on('data', function (data) {
                         console.log('PEER DATA', data.toString());
+                        write(`[${response.from}]-MESSAGE: ${data.toString()}`);
                     });
 
                     peer.signal(response.data);
 
-                    peers.push({id, peer});
+                    peers.push({
+                        id,
+                        peer
+                    });
                     //peers[id] = peer;
 
                     break;
 
                 case 'answer':
-                    var currentPeer = peers.find(s=>s.id == id).peer;
+                    var currentPeer = peers.find(s => s.id == id).peer;
                     console.log('ANSWER', currentPeer)
                     currentPeer.signal(response.data);
                     break;
@@ -101,6 +124,12 @@
                     break;
             }
         });
+
+        socket.on('user disconnected', function (socketId) {
+            var id = peers.findIndex(p => p.id == socketId);
+            peers.splice(id, 1);
+            write(`Peer [${socketId}] disconnected!`);
+        })
     </script>
 </body>
 
