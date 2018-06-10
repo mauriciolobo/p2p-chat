@@ -12,6 +12,7 @@
     <p>ID:
         <span id="myid"></span>
     </p>
+    <textarea id="taMessage" cols="30" rows="10"></textarea>
     <button id="btnSend">Send</button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.1.2/simplepeer.min.js"></script>
@@ -19,16 +20,17 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         var socket = io();
-        var peers = {};
+        var peers = [];
+        $('#btnSend').click(e => {
+            peers.forEach(p=> p.peer.send($('#taMessage').val()));
+        });
         socket.on('connect', function () {
             socket.emit('message', {
                 type: 'request',
                 from: socket.id
             });
             $('#myid').html(socket.id);
-        });
-
-        var peers = {};
+        });        
 
         socket.on('message', (response, id) => {
             console.log('MESSAGE', id, response);
@@ -51,7 +53,12 @@
                         console.log('CONNECTED')
                     });
 
-                    peers[id] = peer;
+                    peer.on('data', function (data) {
+                        console.log('PEER DATA', data.toString());
+                    });
+
+                    //peers[id] = peer;
+                    peers.push({id, peer});
 
                     break;
 
@@ -73,15 +80,21 @@
                         console.log('CONNECTED')
                     });
 
+                    peer.on('data', function (data) {
+                        console.log('PEER DATA', data.toString());
+                    });
+
                     peer.signal(response.data);
 
-                    peers[id] = peer;
+                    peers.push({id, peer});
+                    //peers[id] = peer;
 
                     break;
 
                 case 'answer':
-                    console.log('ANSWER', peers[id])
-                    peers[id].signal(response.data);
+                    var currentPeer = peers.find(s=>s.id == id).peer;
+                    console.log('ANSWER', currentPeer)
+                    currentPeer.signal(response.data);
                     break;
 
                 default:
